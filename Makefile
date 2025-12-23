@@ -1,4 +1,42 @@
-bench: pl0
+# PL/0 JIT Compiler Makefile
+
+# Compiler settings
+CXX = clang++
+CXXFLAGS = `llvm-config --cxxflags` -std=c++17 -O3 -fexceptions -Iinclude -Ivendor/cpp-peglib
+LDFLAGS = `llvm-config --ldflags --system-libs --libs`
+
+# Directories
+SRC_DIR = src
+INCLUDE_DIR = include
+BUILD_DIR = build
+VENDOR_DIR = vendor/cpp-peglib
+
+# Source files
+SOURCES = $(wildcard $(SRC_DIR)/*.cc)
+OBJECTS = $(SOURCES:$(SRC_DIR)/%.cc=$(BUILD_DIR)/%.o)
+
+# Target executable
+TARGET = pl0
+
+# Default target
+.PHONY: all
+all: $(TARGET)
+
+# Create build directory
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+# Compile object files
+$(BUILD_DIR)/%.o: $(SRC_DIR)/%.cc | $(BUILD_DIR)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+# Link executable
+$(TARGET): $(OBJECTS)
+	$(CXX) $(OBJECTS) $(LDFLAGS) -o $(TARGET)
+
+# Benchmark target
+.PHONY: bench
+bench: $(TARGET)
 	@echo '*** Python ***'
 	@echo `python3 --version`
 	@echo `time python3 samples/fib.py > /dev/null`
@@ -8,5 +46,18 @@ bench: pl0
 	@echo '*** PL/0 ***'
 	@echo `time ./pl0 samples/fib.pas > /dev/null`
 
-pl0: pl0.cc ./vendor/cpp-peglib/peglib.h
-	clang++ `llvm-config --cxxflags --ldflags --system-libs --libs` -std=c++17 -O3 -o pl0 -Ivendor/cpp-peglib pl0.cc
+# Clean build artifacts
+.PHONY: clean
+clean:
+	rm -rf $(BUILD_DIR) $(TARGET)
+
+# Help target
+.PHONY: help
+help:
+	@echo "PL/0 JIT Compiler Build System"
+	@echo ""
+	@echo "Available targets:"
+	@echo "  all (default) - Build the pl0 compiler"
+	@echo "  bench         - Run performance benchmarks"
+	@echo "  clean         - Remove build artifacts"
+	@echo "  help          - Show this help message"
